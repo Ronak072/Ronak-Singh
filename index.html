@@ -1,0 +1,593 @@
+<!-- Save this as index.html (replace portrait.jpeg & resume.pdf in the same folder) -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ronak Singh — Web & Game Developer</title>
+  <style>
+    :root{
+      --bg:#0b0b0d; --muted:#9ca3af; --accent:#00d4ff;
+      --card-grad: linear-gradient(180deg,#0f0f10,#141416);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Arial,Helvetica;background:linear-gradient(180deg,#060608,#0b0b0d);color:#fff;min-height:100vh}
+    .container{max-width:1100px;margin:0 auto;padding:36px}
+    nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+    .logo{display:flex;gap:12px;align-items:center}
+    .mark{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#000;background:linear-gradient(135deg,var(--accent),#60a5fa)}
+    .nav-right a{margin-left:14px;color:var(--muted);text-decoration:none}
+    .hero{display:flex;gap:36px;align-items:center;padding:36px 0;flex-wrap:wrap}
+    .hero-left{flex:1;min-width:260px}
+    .hero h1{font-size:44px;margin:6px 0}
+    .tag{color:var(--accent);font-weight:600}
+    .hero p{color:#c7ced6;max-width:640px;line-height:1.5}
+    .btn{display:inline-block;padding:12px 18px;border-radius:12px;background:var(--accent);color:#000;font-weight:700;text-decoration:none;margin-right:10px;box-shadow:0 8px 24px rgba(0,212,255,0.12)}
+    .portrait{width:360px;flex-shrink:0;position:relative;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,0.04);background:#0b0b0d}
+    .portrait img{width:100%;height:100%;display:block;object-fit:cover;object-position:center 25%;border-radius:20px}
+    .badge{position:absolute;left:14px;bottom:14px;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);padding:8px 12px;border-radius:999px;display:flex;gap:8px;align-items:center;border:1px solid rgba(255,255,255,0.06)}
+    .emoji{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;background:linear-gradient(90deg,#ffd166,#ff6b6b);color:#000}
+
+    /* project grid + interaction styles */
+    .proj-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-top:18px}
+    .card{background:var(--card-grad);padding:16px;border-radius:14px;border:1px solid rgba(255,255,255,0.04);transition:transform .18s cubic-bezier(.2,.9,.2,1),box-shadow .18s cubic-bezier(.2,.9,.2,1);will-change:transform,box-shadow;transform-origin:center center;cursor:pointer;display:flex;gap:12px;align-items:center}
+    .proj-thumb{width:84px;height:64px;border-radius:8px;overflow:hidden;background:#0b0b0b;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+    .proj-thumb img{width:100%;height:100%;object-fit:cover}
+    .card h3{margin:0;font-size:16px}
+    .card p{margin:4px 0 0;color:#9aa3ad;font-size:13px}
+
+    footer{margin-top:48px;color:var(--muted);text-align:center;padding:18px 0}
+    @media (max-width:880px){ .hero{flex-direction:column-reverse;align-items:flex-start} .portrait{width:100%} .hero h1{font-size:32px} }
+
+    /* ---------- Modal + Glow Form Styles (Medical Advisor) ---------- */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.5);display:flex;align-items:center;justify-content:center;z-index:999;opacity:0;pointer-events:none;transition:opacity .18s ease}
+    .modal-backdrop.show{opacity:1;pointer-events:auto}
+    .modal{width:920px;max-width:94%;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(183, 1, 1, 0.01));border-radius:16px;padding:18px;border:1px solid rgba(0,212,255,0.06);box-shadow:0 20px 60px rgba(2,6,23,0.7);display:flex;gap:18px;align-items:flex-start;transform:translateY(12px);opacity:0;transition:transform .18s cubic-bezier(.2,.9,.2,1),opacity .18s ease}
+    .modal-backdrop.show .modal{transform:none;opacity:1}
+    .modal-left{flex:1;min-width:300px}
+    .modal-right{width:360px;flex-shrink:0;border-left:1px solid rgba(255,255,255,0.03);padding-left:16px}
+    .form-card{
+  background:#000000;
+  padding:8px;
+  border-radius:12px;
+  border:1px solid rgba(0, 157, 255, 0.08);
+}
+
+    label{display:block;font-size:13px;color:var(--muted);margin:10px 0 6px}
+    select,input[type="number"],.radio-row{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:rgba(11,11,13,0.6);color:#fff;outline:none}
+    .radio-row{display:flex;gap:8px;align-items:center}
+    .radio-row input{margin-right:8px}
+    .small-note{font-size:12px;color:#9aa3ad;margin-top:6px}
+    .glow-btn{display:inline-block;padding:10px 14px;border-radius:12px;background:linear-gradient(90deg,var(--accent),#60a5fa);color:#000;font-weight:700;text-decoration:none;border:none;cursor:pointer;box-shadow:0 8px 28px rgba(0,212,255,0.12)}
+    .result-box{background:linear-gradient(180deg,#060608,#0b0b0d);border-radius:12px;padding:12px;border:1px solid rgba(255,255,255,0.03);min-height:200px;color:#e6f7ff;overflow:auto}
+    .disclaimer{font-size:12px;color:#c7ced6;margin-top:10px;background:rgba(0,0,0,0.25);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.02)}
+    .close-x{position:absolute;right:18px;top:14px;background:transparent;border:0;color:var(--muted);font-size:20px;cursor:pointer}
+
+   
+
+    /* Mobile modal layout */
+    @media (max-width:900px){
+      .modal{flex-direction:column;padding:12px}
+      .modal-right{width:100%;border-left:none;padding-left:0;border-top:1px solid rgba(255,255,255,0.03);padding-top:12px}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- NAV -->
+    <nav>
+      <div class="logo">
+        <div class="mark">RK</div>
+        <div>
+          <div style="font-weight:700">Ronak Singh</div>
+          <div style="font-size:12px;color:var(--muted)">Web Developer • Game Developer</div>
+        </div>
+      </div>
+      <div class="nav-right">
+        <a href="#projects">Projects</a>
+        <a href="#contact">Contact</a>
+        <a class="btn" href="resume.pdf" download>Download CV</a>
+      </div>
+    </nav>
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-left">
+        <div style="color:var(--accent);font-weight:700">Hi, my name is</div>
+        <h1>Ronak <span class="tag">Singh</span></h1>
+
+        <p>I build high-quality web applications and immersive game experiences. My focus is on clean UI, optimized performance, smooth interactions, and detail-driven digital design.</p>
+
+        <div style="margin-top:18px">
+          <a class="btn" href="#projects">See Projects</a>
+          <a href="#contact" style="color:var(--muted);text-decoration:none;margin-left:10px">Contact Me</a>
+        </div>
+
+        <div style="margin-top:18px;color:var(--muted)">
+          HTML • CSS • JavaScript • React • Unreal • Game Development • Unity • C#
+        </div>
+      </div>
+
+      <!-- RIGHT PORTRAIT -->
+      <div class="portrait">
+        <img src="portrait.jpeg" alt="Portrait">
+
+        <div class="badge">
+          <div class="emoji">🔥</div>
+          <div style="font-size:13px">
+            <div style="font-weight:700">Creative Technologist</div>
+            <div style="font-size:11px;color:#bfc9d3">Web & Game Development</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROJECTS -->
+    <section id="projects">
+      <h2 style="margin:18px 0 8px 0">Selected Projects</h2>
+      <p style="margin:0 0 12px 0;color:#9aa3ad">Click a project to view details, screenshots, live demo and source code.</p>
+
+      <div class="proj-grid">
+        <!-- CareMate FIRST -->
+        <div class="card" id="caremate-card" data-id="caremate" title="CareMate — Health advisory system">
+          <div class="proj-thumb"><img src="cm.png" alt="Portrait"></div>
+          <div>
+            <h3>CareMate</h3>
+            <p>Health advisory system — console app ported to a browser interactive. <br><strong style="color:var(--muted);font-size:12px">Advisory Purpose only</strong></p>
+          </div>
+        </div>
+
+        <div class="card" title="Coming Soon">
+          <div class="proj-thumb"><img src="cntl.png" alt="Portrait"></div>
+          <div>
+            <h3>Coming Soon</h3>
+            <p>Work in progress — will be published soon.<br><strong style="color:var(--muted);font-size:12px">—</strong></p>
+          </div>
+        </div>
+
+        <div class="card" title="Coming Soon">
+          <div class="proj-thumb"><img src="cntl1.png" alt="Portrait"></div>
+          <div>
+            <h3>Coming Soon</h3>
+            <p>Work in progress — will be published soon.<br><strong style="color:var(--muted);font-size:12px">—</strong></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section id="contact" style="margin-top:28px;padding:20px 0;background:linear-gradient(180deg,transparent,rgba(255,255,255,0.02));border-radius:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:700">Let’s Build Something Powerful</div>
+          <div style="color:var(--muted);margin-top:6px">Reach me at <a href="mailto:only.ronaq@gmail.com   📞9811389200" style="color:var(--accent);text-decoration:none">only.ronaq@gmail.com   📞9811389200</a></div>
+        </div>
+      </div>
+    </section>
+
+    <footer><small style="color:var(--muted)">Web Developer & Game Developer</small></footer>
+  </div>
+
+  <!-- Modal Backdrop -->
+  <div class="modal-backdrop" id="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="advisor-title">
+      <button class="close-x" id="modal-close" aria-label="Close">&times;</button>
+
+      <div class="modal-left">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <div style="width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;background:linear-gradient(135deg,var(--accent),#60a5fa);color:#000">CM</div>
+          <div>
+            <div id="advisor-title" style="font-weight:700">CareMate — Medical Symptom Advisor</div>
+            <div style="font-size:13px;color:var(--muted)">Interactive advisory (not a substitute for clinical diagnosis)</div>
+          </div>
+        </div>
+
+        <div class="form-card">
+          <label for="main-symptom">What is your main problem?</label>
+          <select id="main-symptom">
+            <option value="">Select an option</option>
+            <option value="1">1. Pain</option>
+            <option value="2">2. Weakness</option>
+            <option value="3">3. Fever</option>
+            <option value="4">4. Cough</option>
+            <option value="5">5. Weirdness</option>
+          </select>
+
+          <div id="dynamic-fields" style="margin-top:6px"></div>
+
+          <label style="margin-top:12px">Which type of remedies would you like?</label>
+          <div class="radio-row" id="remedy-row">
+            <label><input type="radio" name="remedy" value="1"> Allopathic</label>
+            <label><input type="radio" name="remedy" value="2"> Ayurvedic</label>
+            <label><input type="radio" name="remedy" value="3" checked> Both</label>
+            <label><input type="radio" name="remedy" value="4"> None</label>
+          </div>
+
+          <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+            <button class="glow-btn" id="diagnose-btn">Get Diagnosis</button>
+            <button class="glow-btn" id="reset-btn" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.04);box-shadow:none">Reset</button>
+          </div>
+
+          <div class="small-note">This tool is advisory only. Always consult a licensed medical professional for diagnosis and treatment.</div>
+        </div>
+      </div>
+
+      <div class="modal-right">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-weight:700">Diagnosis Result</div>
+          <div style="font-size:12px;color:var(--muted)" id="result-severity">Severity: —</div>
+        </div>
+
+        <div class="result-box" id="result-box">
+          <div style="color:var(--muted)">Results will appear here</div>
+        </div>
+
+        <div class="disclaimer" id="disclaimer" style="margin-top:12px">
+          <strong style="display:block;margin-bottom:6px">DISCLAIMER</strong>
+          ALLOPATHIC MEDICINES SHOULD BE USED UNDER SUPERVISION OF A LICENSED MEDICAL PRACTITIONER.<br>
+
+          AYURVEDIC REMEDIES ARE FOR TEMPORARY USE; CONSULT AN AYURVEDIC PRACTITIONER.<br>
+
+          THIS TOOL IS FOR TEMPORARY ADVISORY PURPOSES ONLY — CONSULT A LICENSED MEDICAL PROFESSIONAL FOR PROPER DIAGNOSIS.
+        </div>
+
+        <div style="margin-top:12px">
+          <pre id="code-block" class="code"></pre>
+          <a id="download-c-btn" class="glow-btn" style="display:inline-block;margin-top:8px">Download Coming soon🥲</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ---------------- micro-interaction (tilt per card) ---------------- */
+    document.querySelectorAll('.card').forEach(card => {
+      card.addEventListener('mousemove', (e) => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const cx = rect.width / 2;
+        const cy = rect.height / 2;
+        const dx = (x - cx) / cx;
+        const dy = (y - cy) / cy;
+        const rotateX = (-dy * 6).toFixed(2);
+        const rotateY = (dx * 6).toFixed(2);
+        const scale = 1.02;
+        card.style.transform = `perspective(700px) translateY(-6px) scale(${scale}) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+        card.style.transition = 'transform 0.12s ease-out';
+      });
+      card.addEventListener('mouseleave', () => {
+        card.style.transform = '';
+        card.style.transition = 'transform 0.28s cubic-bezier(.2,.9,.2,1)';
+      });
+    });
+
+    /* ------------- modal open/close -------------- */
+    const careCard = document.getElementById('caremate-card');
+    const backdrop = document.getElementById('modal-backdrop');
+    const modalClose = document.getElementById('modal-close');
+    const codeBlock = document.getElementById('code-block');
+    const downloadBtn = document.getElementById('download-c-btn');
+
+   
+    // Add download handler (creates blob and downloads)
+    downloadBtn.addEventListener('click', () => {
+      const blob = new Blob([codeBlock.textContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'caremate.c';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    careCard.addEventListener('click', () => {
+      openModal();
+    });
+
+    modalClose.addEventListener('click', closeModal);
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModal(); });
+    document.addEventListener('keydown', e=> { if (e.key === 'Escape') closeModal(); });
+
+    function openModal(){
+      backdrop.classList.add('show');
+      backdrop.setAttribute('aria-hidden', 'false');
+      // ensure codeblock has full C code (if you want, paste full C source here)
+      // codeBlock.textContent = full C code (we've set a placeholder above)
+      setTimeout(()=> document.getElementById('main-symptom').focus(), 120);
+    }
+    function closeModal(){
+      backdrop.classList.remove('show');
+      backdrop.setAttribute('aria-hidden', 'true');
+      clearForm();
+    }
+
+    /* ------------- Dynamic form generation & logic (port of C program) ----------- */
+    const mainSymptom = document.getElementById('main-symptom');
+    const dynamicFields = document.getElementById('dynamic-fields');
+    const diagnoseBtn = document.getElementById('diagnose-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const resultBox = document.getElementById('result-box');
+    const resultSeverity = document.getElementById('result-severity');
+
+    function renderPainFields() {
+      dynamicFields.innerHTML = `
+        <label>Where is the pain?</label>
+        <select id="body-part">
+          <option value="">Choose</option>
+          <option value="1">1. Head</option>
+          <option value="2">2. Chest</option>
+          <option value="3">3. Back</option>
+          <option value="4">4. Abdomen/Torso</option>
+          <option value="5">5. Arm/Leg</option>
+        </select>
+        <label style="margin-top:8px">Severity? 1.Mild 2.Severe:</label>
+        <select id="severity">
+          <option value="1">1. Mild</option>
+          <option value="2">2. Severe</option>
+        </select>
+      `;
+    }
+    function renderWeaknessFields() {
+      dynamicFields.innerHTML = `
+        <label>Affected area?</label>
+        <select id="area">
+          <option value="">Choose</option>
+          <option value="1">1. Whole Body</option>
+          <option value="2">2. Limbs</option>
+        </select>
+        <label style="margin-top:8px">Duration? 1.<5 days 2.>5 days</label>
+        <select id="duration">
+          <option value="">Choose</option>
+          <option value="1">1. <5 days</option>
+          <option value="2">2. >5 days</option>
+        </select>
+        <label style="margin-top:8px">Severity? 1.Mild 2.Severe:</label>
+        <select id="severity">
+          <option value="1">1. Mild</option>
+          <option value="2">2. Severe</option>
+        </select>
+      `;
+    }
+    function renderFeverFields() {
+      dynamicFields.innerHTML = `
+        <label>Temperature?</label>
+        <select id="temp">
+          <option value="">Choose</option>
+          <option value="1">1. 99-100 F</option>
+          <option value="2">2. 101-102 F</option>
+          <option value="3">3. >102 F</option>
+        </select>
+        <label style="margin-top:8px">Duration?</label>
+        <select id="duration">
+          <option value="">Choose</option>
+          <option value="1">1. <2 days</option>
+          <option value="2">2. 3-5 days</option>
+          <option value="3">3. >3 days</option>
+        </select>
+      `;
+    }
+    function renderCoughFields() {
+      dynamicFields.innerHTML = `
+        <label>Type of cough?</label>
+        <select id="type">
+          <option value="">Choose</option>
+          <option value="1">1. Dry</option>
+          <option value="2">2. Wet</option>
+        </select>
+        <label style="margin-top:8px">Duration?</label>
+        <select id="duration">
+          <option value="">Choose</option>
+          <option value="1">1. <1 week</option>
+          <option value="2">2. >1 week</option>
+        </select>
+      `;
+    }
+    function renderWeirdnessFields() {
+      dynamicFields.innerHTML = `
+        <label>Type of weirdness?</label>
+        <select id="type">
+          <option value="">Choose</option>
+          <option value="1">1. Dizziness</option>
+          <option value="2">2. Ear ringing</option>
+          <option value="3">3. Vision blur</option>
+        </select>
+        <label style="margin-top:8px">Duration? 1.Short 2.Long</label>
+        <select id="duration">
+          <option value="">Choose</option>
+          <option value="1">1. Short</option>
+          <option value="2">2. Long</option>
+        </select>
+      `;
+    }
+
+    mainSymptom.addEventListener('change', (e) => {
+      const v = e.target.value;
+      dynamicFields.innerHTML = '';
+      resultBox.innerHTML = `<div style="color:var(--muted)">Fill inputs and click <strong>Get Diagnosis</strong>.</div>`;
+      resultSeverity.textContent = 'Severity: —';
+      if (v === '1') renderPainFields();
+      else if (v === '2') renderWeaknessFields();
+      else if (v === '3') renderFeverFields();
+      else if (v === '4') renderCoughFields();
+      else if (v === '5') renderWeirdnessFields();
+    });
+
+    function getSelectedRadioValue(name) {
+      const r = document.querySelector(`input[name="${name}"]:checked`);
+      return r ? Number(r.value) : null;
+    }
+
+    // Ported remedy logic (keeps mapping exactly like your C code)
+    function showRemediesHTML(disease, severity, remedyType) {
+      const nl = '<br>';
+      let out = `<div style="margin-top:6px"><strong style="color:var(--accent)">=== REMEDIES ===</strong><br>`;
+      function add(s){ out += s + nl; }
+
+      // same mapping as your C program (kept concise)
+      if(disease==="Migraine"){
+        if(remedyType==1||remedyType==3){
+          if(severity==1) add("ALLOPATHIC: Paracetamol 250 mg");
+          else add("ALLOPATHIC: Ibuprofen 400 mg, Sumatriptan");
+        }
+        if(remedyType==2||remedyType==3){
+          if(severity==1) add("AYURVEDIC: Peppermint oil massage, ginger tea");
+          else add("AYURVEDIC: Peppermint oil massage + Anulom-Vilom breathing");
+        }
+      } else if(disease==="Chest Muscle Strain"){
+        if(remedyType==1||remedyType==3) add("ALLOPATHIC: Paracetamol 250 mg");
+        if(remedyType==2||remedyType==3) add("AYURVEDIC: Warm sesame oil massage");
+      } else if(disease==="Angina"){
+        if(remedyType==1||remedyType==3) add("ALLOPATHIC: Nitroglycerin (under doctor), Ibuprofen");
+        if(remedyType==2||remedyType==3) add("AYURVEDIC: Avoid heavy lifting, turmeric milk");
+      } else if(disease==="Gastritis"){
+        if(remedyType==1||remedyType==3) add("ALLOPATHIC: Antacid tablets");
+        if(remedyType==2||remedyType==3) add("AYURVEDIC: Aloe vera juice, tulsi tea");
+      } else if(disease==="Gastritis/Ulcer"){
+        if(remedyType==1||remedyType==3) add("ALLOPATHIC: Pantoprazole 40 mg");
+        if(remedyType==2||remedyType==3) add("AYURVEDIC: Aloe vera + barley water");
+      } else if(disease==="Kidney Infection"){
+        if(remedyType==1||remedyType==3) add("ALLOPATHIC: Antibiotics (doctor-prescribed)");
+        if(remedyType==2||remedyType==3) add("AYURVEDIC: Gokshura tea, coconut water");
+      } else if(disease==="Muscle Strain"||disease==="Strain"){
+        if(remedyType==1||remedyType==3){
+          if(severity==1) add("ALLOPATHIC: Paracetamol 250 mg");
+          else add("ALLOPATHIC: Ibuprofen 400 mg");
+        }
+        if(remedyType==2||remedyType==3){
+          if(severity==1) add("AYURVEDIC: Warm mustard oil massage");
+          else add("AYURVEDIC: Massage + turmeric milk");
+        }
+      } else if(disease==="Fatigue"||disease==="Chronic fatigue"){
+        if(remedyType==1||remedyType==3){
+          if(severity==1) add("ALLOPATHIC: Multivitamins");
+          else add("ALLOPATHIC: Iron + Multivitamins");
+        }
+        if(remedyType==2||remedyType==3) add("AYURVEDIC: Chyawanprash + Milk with saffron / Ashwagandha");
+      } else if(disease==="Viral Fever"){
+        if(remedyType==1||remedyType==3) add("ALLOPATHIC: Paracetamol 500 mg");
+        if(remedyType==2||remedyType==3) add("AYURVEDIC: Tulsi kadha");
+      } else if(disease==="Influenza"){
+        if(remedyType==1||remedyType==3) add("ALLOPATHIC: Paracetamol + rest");
+        if(remedyType==2||remedyType==3) add("AYURVEDIC: Giloy juice + warm fluids");
+      } else if(disease==="Malaria/ Typhoid"){
+        if(remedyType==1||remedyType==3) add("ALLOPATHIC: Paracetamol + doctor-prescribed antibiotics");
+        if(remedyType==2||remedyType==3) add("AYURVEDIC: Tulsi-Giloy tea + hydration");
+      } else if(disease==="Dry Cough"){
+        if(remedyType==1||remedyType==3) add("ALLOPATHIC: Dextromethorphan syrup");
+        if(remedyType==2||remedyType==3) add("AYURVEDIC: Ginger-honey tea");
+      } else if(disease==="Allergic Cough"){
+        if(remedyType==1||remedyType==3) add("ALLOPATHIC: Antihistamines");
+        if(remedyType==2||remedyType==3) add("AYURVEDIC: Tulsi tea, steam inhalation");
+      } else if(disease==="Wet Cough"){
+        if(remedyType==1||remedyType==3) add("ALLOPATHIC: Expectorant syrup");
+        if(remedyType==2||remedyType==3) add("AYURVEDIC: Ginger-honey tea, Giloy + warm fluids");
+      } else if(disease==="Dizziness"){
+        if(remedyType==1||remedyType==3) add("ALLOPATHIC: Oral rehydration solution");
+        if(remedyType==2||remedyType==3) add("AYURVEDIC: Drink coconut water, light rest");
+      } else if(disease==="Tinnitus"){
+        if(remedyType==1||remedyType==3) add("ALLOPATHIC: None / consult ENT");
+        if(remedyType==2||remedyType==3) add("AYURVEDIC: Ginkgo biloba, avoid loud sounds");
+      } else if(disease==="Vision blur"){
+        if(remedyType==1||remedyType==3) add("ALLOPATHIC: Artificial tears");
+        if(remedyType==2||remedyType==3) add("AYURVEDIC: Eye exercises, Triphala eye wash");
+      } else {
+        add("No matching remedies found. Please consult a doctor.");
+      }
+
+      out += '</div>';
+      return out;
+    }
+
+    function getDiagnosisFromForm() {
+      const ms = document.getElementById('main-symptom').value;
+      if (!ms) { alert('Please select main problem.'); return null; }
+
+      let disease = '';
+      let severity = 1;
+
+      if (ms === '1') {
+        const bodyPart = document.getElementById('body-part') ? document.getElementById('body-part').value : '';
+        const s = document.getElementById('severity') ? document.getElementById('severity').value : '1';
+        severity = Number(s);
+        if (!bodyPart) { alert('Choose where the pain is.'); return null; }
+        if (bodyPart === '1') disease = 'Migraine';
+        else if (bodyPart === '2') disease = (severity==1) ? 'Chest Muscle Strain' : 'Angina';
+        else if (bodyPart === '3') disease = (severity==1) ? 'Muscle Strain' : 'Kidney Infection';
+        else if (bodyPart === '4') disease = (severity==1) ? 'Gastritis' : 'Gastritis/Ulcer';
+        else disease = 'Strain';
+      }
+      else if (ms === '2') {
+        const area = document.getElementById('area') ? document.getElementById('area').value : '';
+        const duration = document.getElementById('duration') ? document.getElementById('duration').value : '';
+        const s = document.getElementById('severity') ? document.getElementById('severity').value : '1';
+        severity = Number(s);
+        if (!area || !duration) { alert('Please choose affected area and duration.'); return null; }
+        if (area === '1') disease = (duration === '1') ? 'Fatigue' : 'Chronic fatigue';
+        else disease = 'Fatigue';
+      }
+      else if (ms === '3') {
+        const temp = document.getElementById('temp') ? document.getElementById('temp').value : '';
+        const duration = document.getElementById('duration') ? document.getElementById('duration').value : '';
+        if (!temp || !duration) { alert('Please select temperature and duration.'); return null; }
+        if (temp === '1' && duration === '1') disease = 'Viral Fever';
+        else if (temp === '2' && duration === '2') disease = 'Influenza';
+        else disease = 'Malaria/ Typhoid';
+        severity = 2;
+      }
+      else if (ms === '4') {
+        const type = document.getElementById('type') ? document.getElementById('type').value : '';
+        const duration = document.getElementById('duration') ? document.getElementById('duration').value : '';
+        if (!type || !duration) { alert('Please choose cough type and duration.'); return null; }
+        if (type === '1' && duration === '1') disease = 'Dry Cough';
+        else if (type === '1' && duration === '2') disease = 'Allergic Cough';
+        else disease = 'Wet Cough';
+        severity = 2;
+      }
+      else if (ms === '5') {
+        const type = document.getElementById('type') ? document.getElementById('type').value : '';
+        const duration = document.getElementById('duration') ? document.getElementById('duration').value : '';
+        if (!type || !duration) { alert('Please select type and duration.'); return null; }
+        if (type === '1') disease = 'Dizziness';
+        else if (type === '2') disease = 'Tinnitus';
+        else disease = 'Vision blur';
+        severity = 2;
+      } else { alert('Invalid input'); return null; }
+
+      const remedyType = Number(getSelectedRadioValue('remedy')) || 3;
+      return { disease, severity, remedyType };
+    }
+
+    diagnoseBtn.addEventListener('click', () => {
+      const diag = getDiagnosisFromForm();
+      if (!diag) return;
+      resultSeverity.textContent = `Severity: ${diag.severity === 1 ? 'Mild' : 'Severe'}`;
+      let html = `<div style="margin-bottom:10px"><strong style="color:var(--accent)">=== DIAGNOSIS RESULT ===</strong><br><span style="color:#e6f7ff">Possible Disease: </span><strong>${diag.disease}</strong></div>`;
+      if (diag.remedyType !== 4) html += showRemediesHTML(diag.disease, diag.severity, diag.remedyType);
+      else html += '<div style="color:#9aa3ad">No remedies selected.</div>';
+      html += '<div style="margin-top:8px;color:#9aa3ad;font-size:12px">This advisory is temporary — consult a licensed medical professional for accurate diagnosis and treatment.</div>';
+      resultBox.innerHTML = html;
+      resultBox.scrollTop = 0;
+
+      // also populate code-block with full C source for download (set if not already)
+      if (codeBlock.textContent.trim().length < 20) {
+        codeBlock.textContent = `/* Full CareMate C source - paste your full C code here if you want exact file */\n` + `// (Add your full C program here to present and download)\n`;
+      }
+    });
+
+    resetBtn.addEventListener('click', clearForm);
+    function clearForm() {
+      document.getElementById('main-symptom').value = '';
+      dynamicFields.innerHTML = '';
+      document.querySelectorAll('input[name="remedy"]').forEach(r=> r.checked = false);
+      document.querySelector('input[name="remedy"][value="3"]').checked = true;
+      resultBox.innerHTML = `<div style="color:var(--muted)">Results will appear here</div>`;
+      resultSeverity.textContent = 'Severity: —';
+    }
+    // init
+    clearForm();
+  </script>
+</body>
+</html>
