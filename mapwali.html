@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Sci-Fi Shooter — Minimal Winner Banner</title>
+<style>
+  :root{--bg:#02051b;--muted:#9aa0b3;--accent:#00f0ff}
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#000814 0%, #041028 80%);font-family:Inter,Arial,system-ui;color:#e6f6ff;display:flex;align-items:center;justify-content:center}
+  .stage{width:980px;max-width:98vw;padding:14px;border-radius:12px;background:linear-gradient(180deg, rgba(2,6,18,0.35), rgba(2,6,18,0.12));box-shadow:0 18px 60px rgba(0,0,0,0.7)}
+  .hud{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;color:var(--muted);font-size:13px;gap:12px}
+  .center{display:flex;align-items:center;gap:10px}
+  .btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:6px 10px;border-radius:8px;color:#cfeaff;cursor:pointer}
+  #gameArea{position:relative;display:block;width:100%;overflow:hidden;border-radius:10px}
+  canvas#gameCanvas{display:block;width:100%;height:600px;border-radius:10px;background:transparent}
+  @media(max-width:980px){ canvas#gameCanvas{height:56vw} }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="hud">
+    <div class="center">
+      <div id="score">Score: 0</div>
+      <div id="lives" aria-live="polite"></div>
+    </div>
+    <div class="center">
+      <button id="restart" class="btn">Restart</button>
+      <div id="level" class="muted">Level: 1</div>
+    </div>
+    <div class="center muted">Arrows/WASD — Move • Hold Space — Fire • Reach 50 points for banner</div>
+  </div>
+
+  <div id="gameArea">
+    <canvas id="gameCanvas" role="img" aria-label="Sci-fi shooter"></canvas>
+    <!-- overlay canvas for FX (explosions/trails) -->
+    <canvas id="fxCanvas" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;"></canvas>
+  </div>
+</div>
+
+<script>
+/* Full single-file game (no map, no SVG cinematic).
+   Triggers a simple centered WINNER banner with "over toxicity" when score >= 50.
+   Copy-paste the whole file and open in browser.
+*/
+
+/* ===== Setup ===== */
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d', { alpha: true });
+const fxCanvas = document.getElementById('fxCanvas');
+const fxCtx = fxCanvas.getContext('2d', { alpha: true });
+
+const scoreEl = document.getElementById('score');
+const livesContainer = document.getElementById('lives');
+const levelEl = document.getElementById('level');
+const restartBtn = document.getElementById('restart');
+
+let W = 980, H = 600;
+function resizeAll(){
+  const rect = canvas.getBoundingClientRect();
+  W = Math.max(600, Math.floor(rect.width || 980));
+  H = Math.max(360, Math.floor(rect.height || 600));
+  canvas.width = W * devicePixelRatio; canvas.height = H * devicePixelRatio;
+  canvas.style.width = (rect.width || W) + 'px'; canvas.style.height = (rect.height || H) + 'px';
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+
+  fxCanvas.width = W * devicePixelRatio; fxCanvas.height = H * devicePixelRatio;
+  fxCanvas.style.width = (rect.width || W) + 'px'; fxCanvas.style.height = (rect.height || H) + 'px';
+  fxCtx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+}
+window.addEventListener('resize', resizeAll);
+resizeAll();
+
+/* ===== Helpers ===== */
+function rand(min,max){ return Math.random()*(max-min)+min }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)) }
+
+/* ===== Game state ===== */
+let running = true;
+let keys = {};
+let pointers = [];
+let bullets = [];
+let enemies = [];
+let particles = [];
+let fxParticles = [];
+let score = 0;
+let lives = 3;
+let level = 1;
+let spawnTimer = 0;
+let enemySpawnRate = 1.6;
+let lastTime = 0;
+
+/* Winner banner state */
+let victoryTriggered = false;
+
+/* ===== HUD hearts ===== */
+function renderHearts(){
+  livesContainer.innerHTML = '';
+  for(let i=0;i<lives;i++){
+    const span = document.createElement('span');
+    span.className = 'heart';
+    span.innerHTML = `<svg viewBox="0 0 32 32" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g${i}" x1="0" x2="1"><stop offset="0" stop-color="#ff6b88"/><stop offset="1" stop-color="#ff1f5a"/></linearGradient></defs><path fill="url(#g${i})" d="M16 28s-9.6-6.75-13-10.2C-0.6 13.9 4 6 9 7c2.4.5 4 3 7 6 3-3 4.6-5.5 7-6 5-1 9.6 6.9 6 10.8C25.6 21.25 16 28 16 28z"/></svg>`;
+    livesContainer.appendChild(span);
+  }
+  if(lives === 0){ const span = document.createElement('span'); span.textContent = '💔'; livesContainer.appendChild(span); }
+}
+
+/* ===== Player ===== */
+const player = { x: W/2, y: H-90, w: 42, h: 54, speed:420, cooldown:0, fireRate:0.045, gunSpin:0, recoil:0 };
+
+/* ===== Input ===== */
+window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; if(e.key===' ') e.preventDefault(); });
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); pointers.push({ id:e.pointerId, x:e.offsetX, y:e.offsetY }); });
+canvas.addEventListener('pointermove', e => { for(let p of pointers) if(p.id===e.pointerId) p.x=e.offsetX, p.y=e.offsetY; });
+canvas.addEventListener('pointerup', e => { canvas.releasePointerCapture(e.pointerId); pointers = pointers.filter(p=>p.id!==e.pointerId); });
+
+/* ===== Entities ===== */
+function spawnEnemy(type=0){
+  const x = rand(60, W-60);
+  const y = -40;
+  let enemy = { x,y,w:type===2?28:46,h:type===2?20:34, hp:type===2?1:(type===1?2:1), type, vx:0, vy:rand(30,70)+level*3, t:0, color:type===2? '#ff4d6d' : '#ff9f00' };
+  enemies.push(enemy);
+}
+function fireBullet(x,y,dx,dy,owner='player'){ bullets.push({ x,y,dx,dy,owner,ttl:3 }); }
+
+/* ===== Collision ===== */
+function rectHit(a,b){
+  return !(a.x + a.w/2 < b.x - b.w/2 || a.x - a.w/2 > b.x + b.w/2 || a.y + a.h/2 < b.y - b.h/2 || a.y - a.h/2 > b.y + b.h/2);
+}
+
+/* ===== Particles ===== */
+function spawnParticles(x,y,color,count=12){
+  for(let i=0;i<count;i++){ particles.push({ x,y,vx:rand(-220,220),vy:rand(-220,220),size:rand(1,3),life:rand(0.45,1.05),age:0,color }); }
+}
+function spawnFx(x,y,color,count=16){ for(let i=0;i<count;i++) fxParticles.push({ x,y,vx:rand(-320,320),vy:rand(-320,320),size:rand(2,6),life:rand(0.6,1.4),age:0,color }); }
+
+/* ===== Shooting: minigun + muzzle R ===== */
+function shootMinigun(){
+  const spread = 6 + Math.random()*6;
+  const speed = 720;
+  fireBullet(player.x - 11, player.y - 36, -spread, -speed, 'player');
+  fireBullet(player.x + 11, player.y - 36, spread, -speed, 'player');
+  particles.push({ x: player.x - 11, y: player.y - 42, vx:0, vy:-24, size:12, life:0.12, age:0, color:'R' });
+  particles.push({ x: player.x + 11, y: player.y - 42, vx:0, vy:-24, size:12, life:0.12, age:0, color:'R' });
+  player.gunSpin += 0.32; player.recoil = 4;
+  spawnParticles(player.x + (Math.random()<0.5?-12:12), player.y - 48, '#a8fff9', 4);
+}
+
+/* ===== Start Victory (minimal banner) ===== */
+function startVictory(){
+  if(victoryTriggered) return;
+  victoryTriggered = true;
+  // stop gameplay
+  running = false;
+  // clear battlefield
+  bullets = []; enemies = []; particles = []; fxParticles = [];
+}
+
+/* ===== Main update (replace your broken version with this) ===== */
+function update(dt){
+  // safe victory trigger check (numeric)
+  try {
+    const numericScore = Number(score);
+    if(!victoryTriggered && !isNaN(numericScore) && numericScore >= 50){
+      console.log('[DEBUG] victory trigger met:', numericScore);
+      startVictory();
+    }
+  } catch(e){ console.error('Victory check failed', e); }
+
+  if(!running) return;
+
+  // inputs
+  let moveX=0, moveY=0;
+  if(keys['arrowleft']||keys['a']) moveX=-1;
+  if(keys['arrowright']||keys['d']) moveX=1;
+  if(keys['arrowup']||keys['w']) moveY=-1;
+  if(keys['arrowdown']||keys['s']) moveY=1;
+
+  if(pointers.length > 0){
+    const p = pointers[0];
+    const dx = p.x - player.x, dy = p.y - player.y;
+    const dist = Math.hypot(dx,dy);
+    if(dist > 6){ moveX = clamp(dx/100,-1,1); moveY = clamp(dy/100,-1,1); }
+    if(player.cooldown <= 0){ player.cooldown = player.fireRate; shootMinigun(); }
+  }
+
+  player.x += moveX * player.speed * dt;
+  player.y += moveY * player.speed * dt;
+  player.x = clamp(player.x, 36, W-36);
+  player.y = clamp(player.y, H/2, H-30);
+
+  if((keys[' ']||keys['space']) && player.cooldown <= 0){
+    player.cooldown = player.fireRate; shootMinigun();
+  }
+  player.cooldown -= dt;
+
+  player.gunSpin *= (1 - Math.min(0.5, dt*6));
+  player.recoil *= (1 - Math.min(0.5, dt*8));
+
+  // bullets move
+  for(let b of bullets){ b.x += b.dx*dt; b.y += b.dy*dt; b.ttl -= dt; }
+  bullets = bullets.filter(b => b.ttl > 0 && b.y > -80 && b.y < H+80 && b.x > -80 && b.x < W+80);
+
+  // spawn enemies (easier)
+  spawnTimer -= dt;
+  if(spawnTimer <= 0){
+    const waveSize = Math.min(4, 1 + Math.floor(level * 0.45));
+    for(let i=0;i<waveSize;i++){
+      const t = (Math.random()<0.12 && level>3) ? 2 : (Math.random()<0.18 ? 1 : 0);
+      spawnEnemy(t);
+    }
+    spawnTimer = clamp(enemySpawnRate * Math.max(0.7, 1 - level*0.04), 0.6, 2.6);
+  }
+
+  // update enemies
+  for(let e of enemies){
+    e.t += dt;
+    if(e.type===1) e.x += Math.sin(e.t*2+e.x)*30*dt;
+    else if(e.type===2) e.x += Math.sin(e.t*6)*60*dt;
+    e.y += e.vy * dt;
+    if(Math.random() < 0.002 + level*0.0006) fireBullet(e.x, e.y+18, rand(-60,60), rand(120,200)+level*6, 'enemy');
+  }
+
+  // player bullets -> enemies
+  for(let b of bullets.filter(b=>b.owner==='player')){
+    for(let e of enemies){
+      const A = {x:b.x,y:b.y,w:6,h:6}, B = {x:e.x,y:e.y,w:e.w,h:e.h};
+      if(rectHit(A,B)){
+        e.hp -= 1; b.ttl = -1; spawnParticles(b.x,b.y,'#bfffe9',6);
+        if(e.hp <= 0){ score += 8 + Math.floor(level*2); spawnParticles(e.x,e.y,e.color,18); enemies.splice(enemies.indexOf(e),1); break; }
+      }
+    }
+  }
+
+  // enemy bullets -> player
+  for(let b of bullets.filter(b=>b.owner==='enemy')){
+    const A = {x:b.x,y:b.y,w:6,h:6}, P = {x:player.x,y:player.y,w:player.w,h:player.h};
+    if(rectHit(A,P)){
+      b.ttl = -1; spawnParticles(player.x, player.y, '#ffccd6', 18); lives -= 1; renderHearts();
+      if(lives <= 0){ running = false; } else { bullets = bullets.filter(x=>x.owner!=='enemy'); player.x = W/2; player.y = H - 90; }
+    }
+  }
+
+  // enemies hitting player or falling
+  for(let e of [...enemies]){
+    const A = {x:e.x,y:e.y,w:e.w,h:e.h}, P = {x:player.x,y:player.y,w:player.w,h:player.h};
+    if(rectHit(A,P) || e.y > H+60){
+      spawnParticles(e.x,e.y,e.color,12);
+      if(e.y <= H+60){ lives -= 1; renderHearts(); if(lives <= 0) running = false; player.x = W/2; player.y = H - 90; }
+      enemies.splice(enemies.indexOf(e),1);
+    }
+  }
+
+  // particles update
+  for(let i=particles.length-1;i>=0;i--){ const p = particles[i]; p.age += dt; p.x += p.vx*dt; p.y += p.vy*dt; p.vy += 160*dt; if(p.age >= p.life) particles.splice(i,1); }
+
+  // level progression
+  const nextLevelScore = level * 240;
+  if(score >= nextLevelScore){ level++; enemySpawnRate = Math.max(0.6, enemySpawnRate - 0.06); lives = Math.min(6, lives + 1); renderHearts(); }
+
+  scoreEl.textContent = 'Score: ' + score;
+  levelEl.textContent = 'Level: ' + level;
+}
+
+/* ===== Draw ===== */
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  // backdrop
+  ctx.fillStyle = '#03102a'; ctx.fillRect(0,0,W,H);
+  drawStarfield();
+
+  // neon grid
+  ctx.save();
+  const t = performance.now()/1000;
+  ctx.globalAlpha = 0.06;
+  ctx.strokeStyle = '#00f0ff';
+  ctx.lineWidth = 1;
+  for(let x=0;x<W;x+=40){ ctx.beginPath(); const offset = (t*40)%40; ctx.moveTo(x+offset,0); ctx.lineTo(x+offset-40,H); ctx.stroke(); }
+  ctx.restore();
+
+  // player
+  drawPlayer();
+
+  // bullets
+  for(let b of bullets){
+    if(b.owner==='player'){
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const len = 12 + Math.abs(b.dx)*0.02;
+      const angle = Math.atan2(b.dy,b.dx);
+      ctx.translate(b.x,b.y); ctx.rotate(angle);
+      const grad = ctx.createLinearGradient(-len,0,len,0);
+      grad.addColorStop(0,'rgba(160,255,245,0)');
+      grad.addColorStop(0.4,'rgba(160,255,245,0.92)');
+      grad.addColorStop(1,'rgba(160,255,245,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.ellipse(0,0,3,Math.max(2,len*0.25),0,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    } else {
+      ctx.fillStyle = '#ffb6b6'; ctx.beginPath(); ctx.ellipse(b.x,b.y,4,8,0,0,Math.PI*2); ctx.fill();
+    }
+  }
+
+  // enemies
+  for(let e of enemies){
+    ctx.save(); ctx.translate(e.x,e.y);
+    const grad = ctx.createLinearGradient(-e.w/2, -e.h/2, e.w/2, e.h/2);
+    grad.addColorStop(0, shadeColor(e.color, -16)); grad.addColorStop(0.6, e.color); grad.addColorStop(1, shadeColor(e.color, 12));
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.moveTo(-e.w/2, e.h/2); ctx.quadraticCurveTo(0, -e.h/2 - Math.sin(e.t*6)*6, e.w/2, e.h/2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fillRect(-e.w/3, -e.h/4, e.w/1.6, e.h/6);
+    ctx.font = `${Math.max(12, e.w/2.2)}px Inter, Arial Black`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillText('M', 2, 2); ctx.fillStyle = '#ffffff'; ctx.fillText('M', 0, 0);
+    ctx.restore();
+  }
+
+  // particles & muzzle 'R'
+  for(let p of particles){
+    const lifeRatio = 1 - p.age/p.life;
+    ctx.globalAlpha = lifeRatio;
+    if(p.color === 'R'){
+      ctx.save();
+      ctx.font = `${12 * lifeRatio + 8}px Arial Black`;
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('R', p.x, p.y);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.ellipse(p.x,p.y,p.size*lifeRatio+0.5,p.size*lifeRatio+0.5,0,0,Math.PI*2); ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // FX overlay is drawn separately
+  // If victory is triggered show centered banner
+  if(victoryTriggered){
+    drawBanner();
+  }
+
+  // Game over overlay (if not running and no victory)
+  if(!running && !victoryTriggered){
+    ctx.fillStyle = 'rgba(2,2,10,0.66)'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '40px Inter, Arial'; ctx.fillText('GAME OVER', W/2, H/2 - 10);
+    ctx.font = '18px Inter, Arial'; ctx.fillStyle = '#cfeaff'; ctx.fillText('Press Restart to play again', W/2, H/2 + 26);
+  }
+}
+
+/* ===== Banner draw (simple centered) ===== */
+function drawBanner(){
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+  ctx.fillRect(0,0,W,H);
+
+  const bw = Math.min(720, Math.floor(W * 0.72));
+  const bh = Math.min(160, Math.floor(H * 0.24));
+  const bx = Math.round((W - bw) / 2);
+  const by = Math.round((H - bh) / 2);
+
+  ctx.fillStyle = 'rgba(6,8,14,0.95)';
+  roundRect(ctx, bx, by, bw, bh, 12, true, false);
+
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `${Math.max(28, Math.floor(bh * 0.32))}px Inter, Arial Black`;
+  ctx.fillStyle = '#ffeb66';
+  ctx.fillText('WINNER', W/2, by + Math.floor(bh * 0.38));
+
+  ctx.font = `${Math.max(8, Math.floor(bh * 0.085))}px Inter, Arial`;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('over toxicity', W/2, by + Math.floor(bh * 0.72));
+
+  ctx.restore();
+}
+
+/* ===== FX overlay draw & update ===== */
+let fxLast = performance.now();
+function updateFx(dt){
+  for(let i=fxParticles.length-1;i>=0;i--){
+    const p = fxParticles[i]; p.age += dt; p.x += p.vx*dt; p.y += p.vy*dt; p.vy += 160*dt;
+    if(p.age >= p.life) fxParticles.splice(i,1);
+  }
+}
+function drawFxOverlay(){
+  fxCtx.clearRect(0,0,W,H);
+  for(const p of fxParticles){
+    const alpha = 1 - (p.age / p.life);
+    fxCtx.globalAlpha = alpha;
+    fxCtx.fillStyle = p.color;
+    fxCtx.beginPath(); fxCtx.ellipse(p.x,p.y,p.size*alpha,p.size*alpha,0,0,Math.PI*2); fxCtx.fill();
+  }
+  fxCtx.globalAlpha = 1;
+}
+
+/* ===== Utilities ===== */
+function drawStarfield(){
+  const now = performance.now()/1000;
+  for(let i=0;i<34;i++){
+    const x = (i*47 + (now*12)%W*0.7) % W;
+    const y = (i*97 + (now*8)%H*0.9) % H;
+    ctx.fillStyle = 'rgba(255,255,255,0.03)'; ctx.fillRect(x, y, 2, 2);
+  }
+}
+function shadeColor(col, percent) {
+  const f = parseInt(col.slice(1),16), t = percent<0?0:255, p = Math.abs(percent)/100;
+  const R = Math.round((t - (f>>16)) * p) + (f>>16);
+  const G = Math.round((t - (f>>8 & 0x00FF)) * p) + (f>>8 & 0x00FF);
+  const B = Math.round((t - (f & 0x0000FF)) * p) + (f & 0x0000FF);
+  return `rgb(${R},${G},${B})`;
+}
+function roundRect(ctx, x, y, w, h, r, fill, stroke){
+  if(typeof r === 'undefined') r = 5;
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+  if(fill) ctx.fill();
+  if(stroke) ctx.stroke();
+}
+
+/* ===== Player draw (minigun visuals) ===== */
+function drawPlayer(){
+  ctx.save(); ctx.translate(player.x, player.y);
+  ctx.rotate(Math.sin(player.gunSpin*0.6)*0.02);
+  ctx.save(); ctx.translate(0, 6 + player.recoil*0.6); ctx.globalAlpha = 0.18; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(0, 14, 30, 10, 0,0,Math.PI*2); ctx.fill(); ctx.restore();
+  const hullGrad = ctx.createLinearGradient(-20,-22,20,22); hullGrad.addColorStop(0,'#e9fbff'); hullGrad.addColorStop(1,'#9fdcff');
+  ctx.fillStyle = hullGrad;
+  ctx.beginPath(); ctx.moveTo(0,-26); ctx.quadraticCurveTo(8,-10,18,18); ctx.lineTo(-18,18); ctx.quadraticCurveTo(-8,-10,0,-26); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(0,-2,10,8,0,0,Math.PI*2); const cockGrad = ctx.createLinearGradient(0,-10,0,6); cockGrad.addColorStop(0,'#002bff'); cockGrad.addColorStop(1,'#0077ff'); ctx.fillStyle = cockGrad; ctx.fill();
+  ctx.save(); ctx.translate(0, -8 + player.recoil*0.2); player.gunSpin += 0.9;
+  const spin = player.gunSpin;
+  for(let i=0;i<4;i++){
+    const angle = (i/4)*Math.PI*2 + spin;
+    const rx = Math.cos(angle)*6, ry = Math.sin(angle)*3;
+    ctx.beginPath(); ctx.fillStyle = '#31363b'; ctx.ellipse(rx - 8, ry, 6, 3, 0,0,Math.PI*2); ctx.fill();
+    if(player.cooldown < player.fireRate * 2){ ctx.fillStyle = '#a8fff9'; ctx.beginPath(); ctx.ellipse(rx - 12, ry, 2.2, 1.5, 0,0,Math.PI*2); ctx.fill(); }
+  }
+  ctx.fillStyle = '#1b1f23'; ctx.fillRect(-30, -4, 60, 8);
+  ctx.restore();
+  ctx.beginPath(); ctx.fillStyle = 'rgba(0,240,255,0.08)'; ctx.ellipse(0, 26 + player.recoil*0.8, 26, 10, 0,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+/* ===== Main loop ===== */
+let lastFrame = 0;
+function loop(now){
+  if(!lastFrame) lastFrame = now;
+  const dt = Math.min(0.05, (now - lastFrame)/1000);
+  lastFrame = now;
+  if(running) update(dt);
+  updateFx(dt);
+  draw();
+  drawFxOverlay();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ===== Events ===== */
+restartBtn.addEventListener('click', ()=> {
+  score = 0; lives = 3; level = 1; enemies = []; bullets = []; particles = []; fxParticles = [];
+  running = true; victoryTriggered = false;
+  spawnTimer = 0.2; enemySpawnRate = 1.6; player.x = W/2; player.y = H - 90;
+  renderHearts();
+});
+
+/* ===== Init ===== */
+spawnTimer = 0.2; enemySpawnRate = 1.6; renderHearts();
+
+/* ===== Debug helper: force banner (open console and run startVictory()) ===== */
+window.startVictory = startVictory;
+</script>
+</body>
+</html>
